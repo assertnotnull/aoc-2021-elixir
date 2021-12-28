@@ -1,0 +1,212 @@
+# Day3
+
+## Day3
+
+```elixir
+Mix.install(
+  [
+    {:kino, "~> 0.4.1"}
+    # {:nx, github: "elixir-nx/nx", sparse: "nx"}
+  ],
+  force: true
+)
+
+text = Kino.Input.textarea("Input")
+```
+
+## Part 1
+
+```elixir
+input = Kino.Input.read(text)
+
+lines = String.split(input, "\n", trim: true)
+length = Enum.count(lines)
+
+gamma =
+  lines
+  |> Enum.map(fn row ->
+    row
+    |> String.split("", trim: true)
+    |> Enum.map(&String.to_integer/1)
+  end)
+  |> Enum.reduce(fn l, r -> Enum.zip_with(l, r, &(&1 + &2)) end)
+  |> Enum.map(fn bit ->
+    if bit > length / 2 do
+      1
+    else
+      0
+    end
+  end)
+
+epsilon =
+  Enum.map(gamma, fn bit ->
+    if bit == 1 do
+      0
+    else
+      1
+    end
+  end)
+
+total = Integer.undigits(gamma, 2) * Integer.undigits(epsilon, 2)
+```
+
+## Part 2
+
+```elixir
+# lost..
+```
+
+## Day 3 Jose
+
+## Part 1
+
+```elixir
+import Bitwise
+input = Kino.Input.read(text)
+
+numbers =
+  input
+  |> String.split("\n", trim: true)
+  |> Enum.map(&(&1 |> String.to_charlist() |> List.to_tuple()))
+
+[sample | _] = numbers
+number_length = tuple_size(sample)
+
+half = div(length(numbers), 2)
+
+gamma_as_list =
+  for pos <- 0..(number_length - 1) do
+    # We only need to count until half + 1 to know if we have more zeroes than ones
+    zero_count = Enum.count_until(numbers, &(elem(&1, pos) == ?0), half + 1)
+    if zero_count > half, do: ?0, else: ?1
+  end
+
+gamma = List.to_integer(gamma_as_list, 2)
+mask = 2 ** number_length - 1
+
+epsilon = bnot(gamma) &&& 0b11111
+
+gamma * epsilon
+```
+
+## Part 2
+
+```elixir
+input = Kino.Input.read(text)
+
+defmodule Recursion do
+  def o2([number], _pos) do
+    tuple_to_number(number)
+  end
+
+  def o2(numbers, pos) do
+    zero_count = Enum.count(numbers, &(elem(&1, pos) == ?0))
+    one_count = length(numbers) - zero_count
+    to_keep = if one_count >= zero_count, do: ?1, else: ?0
+    numbers = Enum.filter(numbers, &(elem(&1, pos) == to_keep))
+    o2(numbers, pos + 1)
+  end
+
+  def co2([number], _pos) do
+    tuple_to_number(number)
+  end
+
+  def co2(numbers, pos) do
+    zero_count = Enum.count(numbers, &(elem(&1, pos) == ?0))
+    one_count = length(numbers) - zero_count
+    to_keep = if one_count < zero_count, do: ?1, else: ?0
+    numbers = Enum.filter(numbers, &(elem(&1, pos) == to_keep))
+    co2(numbers, pos + 1)
+  end
+
+  def tuple_to_number(number) do
+    number
+    |> Tuple.to_list()
+    |> List.to_integer(2)
+  end
+end
+
+numbers =
+  input
+  |> String.split("\n", trim: true)
+  |> Enum.map(&(&1 |> String.to_charlist() |> List.to_tuple()))
+
+o2 = Recursion.o2(numbers, 0)
+co2 = Recursion.co2(numbers, 0)
+
+o2 * co2
+```
+
+```elixir
+input = Kino.Input.read(text)
+
+defmodule Recursion do
+  defp recur([number], _pos, _fun) do
+    number
+    |> Tuple.to_list()
+    |> List.to_integer(2)
+  end
+
+  defp recur(numbers, pos, fun) do
+    zero_count = Enum.count(numbers, &(elem(&1, pos) == ?0))
+    one_count = length(numbers) - zero_count
+    to_keep = fun.(zero_count, one_count)
+    numbers = Enum.filter(numbers, &(elem(&1, pos) == to_keep))
+    recur(numbers, pos + 1, fun)
+  end
+
+  def o2(numbers) do
+    recur(numbers, 0, fn zero_count, one_count ->
+      if one_count >= zero_count, do: ?1, else: ?0
+    end)
+  end
+
+  def co2(numbers) do
+    recur(numbers, 0, fn zero_count, one_count ->
+      if one_count < zero_count, do: ?1, else: ?0
+    end)
+  end
+end
+
+numbers =
+  input
+  |> String.split("\n", trim: true)
+  |> Enum.map(&(&1 |> String.to_charlist() |> List.to_tuple()))
+
+o2 = Recursion.o2(numbers)
+co2 = Recursion.co2(numbers)
+
+o2 * co2
+```
+
+## Part 1 - Nx
+
+```elixir
+matrix =
+  input
+  |> String.split("\n", trim: true)
+  |> Enum.map(fn line ->
+    Enum.map(String.to_charlist(line), &(&1 - ?0))
+  end)
+  |> Nx.tensor(type: {:u, 8}, names: [:numbers, :digits])
+  |> IO.inspect()
+
+{total, number_length} = Nx.shape(matrix)
+
+ones =
+  matrix
+  |> Nx.sum(axes: [:numbers])
+  |> IO.inspect()
+  |> Nx.greater(div(total, 2))
+  |> IO.inspect()
+
+powers = Nx.reverse(Nx.power(2, Nx.iota({number_length})))
+# Nx.power(2, Nx.subtract(number_length - 1, Nx.iota({number_length})))
+
+gamma = Nx.dot(ones, powers) |> Nx.to_number()
+mask = 2 ** number_length - 1
+
+epsilon = bnot(gamma) &&& 0b11111
+
+gamma * epsilon
+```

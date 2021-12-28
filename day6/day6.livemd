@@ -1,0 +1,55 @@
+# Day 5
+
+## Section
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+input = Kino.Input.textarea("Please type your input")
+```
+
+```elixir
+# input = "16,1,2,0,4,2,7,1,2,14"
+
+numbers =
+  input
+  |> Kino.Input.read()
+  |> String.split(",")
+  |> Enum.map(&String.to_integer/1)
+
+sum = Enum.sum(numbers)
+size = length(numbers)
+sorted = Enum.sort(numbers)
+middle = div(size, 2)
+# left = Enum.at(sorted, middle)
+# right = Enum.at(sorted, middle + 1)
+# div(left + right,2)
+
+freq = Enum.frequencies(sorted) |> Enum.sort(fn {_k1, v1}, {_k2, v2} -> v1 > v2 end)
+
+defmodule Calc do
+  def calc(numbers, pos, prev, fuel) do
+    IO.inspect(pos)
+
+    new_calc_fuel =
+      numbers
+      |> Enum.map(fn num ->
+        abs(num - pos)
+      end)
+      |> IO.inspect()
+      |> Enum.sum()
+
+    IO.inspect(prev)
+    IO.inspect(fuel)
+    IO.inspect(new_calc_fuel)
+
+    if new_calc_fuel < fuel do
+      calc(numbers, Enum.at(numbers, div(pos, 2)), pos, new_calc_fuel)
+    else
+      prev
+    end
+  end
+end
+
+IO.inspect(sorted)
+left = Calc.calc(sorted, Enum.at(sorted, middle), 0, sum)
+```

@@ -1,0 +1,153 @@
+# Day 8
+
+## Part 1
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+
+input = Kino.Input.textarea("input")
+```
+
+```elixir
+# input = """
+# be cfbegad cbdgef fgaecd cgeb fdcge agebfd fecdb fabcd edb |fdgacbe cefdb cefbgd gcbe
+# edbfga begcd cbg gc gcadebf fbgde acbgfd abcde gfcbed gfec |fcgedb cgb dgebacf gc
+# fgaebd cg bdaec gdafb agbcfd gdcbef bgcad gfac gcb cdgabef |cg cg fdcagb cbg
+# fbegcd cbd adcefb dageb afcb bc aefdc ecdab fgdeca fcdbega |efabcd cedba gadfec cb
+# aecbfdg fbg gf bafeg dbefa fcge gcbea fcaegb dgceab fcbdga |gecf egdcabf bgf bfgea
+# fgeab ca afcebg bdacfeg cfaedg gcfdb baec bfadeg bafgc acf |gebdcfa ecba ca fadegcb
+# dbcfg fgd bdegcaf fgec aegbdf ecdfab fbedc dacgb gdcebf gf |cefg dcbef fcge gbcadfe
+# bdfegc cbegaf gecbf dfcage bdacg ed bedf ced adcbefg gebcd |ed bcgafe cdgba cbgef
+# egadfb cdbfeg cegd fecab cgb gbdefca cg fgcdab egfdb bfceg |gbdfcae bgc cg cgb
+# gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc |fgae cfgab fg bagce
+# """
+
+lines =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Enum.map(fn line ->
+    line
+    |> String.split("|", trim: true)
+    |> Enum.map(fn line -> String.split(line, [" ", "\n"], trim: true) end)
+  end)
+
+lines
+|> Enum.map(fn [_signals, output] ->
+  output
+  |> Enum.map(fn signal ->
+    case String.length(signal) do
+      2 -> 1
+      3 -> 7
+      4 -> 4
+      7 -> 8
+      _ -> signal
+    end
+  end)
+  |> Enum.filter(fn x -> is_number(x) end)
+end)
+|> List.flatten()
+|> Enum.frequencies()
+|> Enum.reduce(0, fn {_k, v}, acc -> acc + v end)
+```
+
+## Part 2
+
+```elixir
+# input = """
+# be cfbegad cbdgef fgaecd cgeb fdcge agebfd fecdb fabcd edb |fdgacbe cefdb cefbgd gcbe
+# edbfga begcd cbg gc gcadebf fbgde acbgfd abcde gfcbed gfec |fcgedb cgb dgebacf gc
+# fgaebd cg bdaec gdafb agbcfd gdcbef bgcad gfac gcb cdgabef |cg cg fdcagb cbg
+# fbegcd cbd adcefb dageb afcb bc aefdc ecdab fgdeca fcdbega |efabcd cedba gadfec cb
+# aecbfdg fbg gf bafeg dbefa fcge gcbea fcaegb dgceab fcbdga |gecf egdcabf bgf bfgea
+# fgeab ca afcebg bdacfeg cfaedg gcfdb baec bfadeg bafgc acf |gebdcfa ecba ca fadegcb
+# dbcfg fgd bdegcaf fgec aegbdf ecdfab fbedc dacgb gdcebf gf |cefg dcbef fcge gbcadfe
+# bdfegc cbegaf gecbf dfcage bdacg ed bedf ced adcbefg gebcd |ed bcgafe cdgba cbgef
+# egadfb cdbfeg cegd fecab cgb gbdefca cg fgcdab egfdb bfceg |gbdfcae bgc cg cgb
+# gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc |fgae cfgab fg bagce
+# """
+input = input |> Kino.Input.read()
+
+lines =
+  input
+  |> String.split("\n", trim: true)
+  |> Enum.map(fn line ->
+    line
+    |> String.split("|", trim: true)
+    |> Enum.map(&String.split(&1, " ", trim: true))
+  end)
+
+lines
+|> Enum.map(fn [symbols | output] ->
+  c_symbols = Enum.map(symbols, &String.to_charlist/1)
+  eight = Enum.find(c_symbols, &(length(&1) == 7))
+  seven = Enum.find(c_symbols, &(length(&1) == 3))
+  one = Enum.find(c_symbols, &(length(&1) == 2))
+  four = Enum.find(c_symbols, &(length(&1) == 4))
+
+  [nine] = Enum.filter(c_symbols, &(four -- &1 == [])) -- [eight, four]
+
+  possible_six_zero = Enum.filter(c_symbols, &(length(&1) == 6)) -- [nine]
+  zero = Enum.find(possible_six_zero, &(length(&1 -- seven) == 3))
+  six = Enum.find(possible_six_zero, &(&1 != zero))
+
+  three = Enum.find(c_symbols, &(length(&1 -- one) == 3))
+  [five] = Enum.filter(c_symbols, &(length(six -- &1) == 1)) -- [nine, zero]
+  [two] = c_symbols -- [zero, one, three, four, five, six, seven, eight, nine]
+
+  mapping = %{
+    zero => 0,
+    one => 1,
+    two => 2,
+    three => 3,
+    four => 4,
+    five => 5,
+    six => 6,
+    seven => 7,
+    eight => 8,
+    nine => 9
+  }
+
+  Enum.map(List.flatten(output), fn one_output ->
+    char_output = String.to_charlist(one_output)
+
+    mapping
+    |> Map.filter(fn {k, _v} -> length(k) == length(char_output) && k -- char_output == [] end)
+    |> Map.values()
+    |> List.first()
+    |> Integer.to_string()
+  end)
+  |> Enum.reduce(&(&2 <> &1))
+  |> String.to_integer()
+end)
+|> Enum.sum()
+```
+
+## Part 2 - Jose
+
+```elixir
+input = "be cfbegad cbdgef fgaecd cgeb fdcge agebfd fecdb fabcd edb"
+
+map = input |> String.split(" ") |> Enum.group_by(&byte_size/1, &String.to_charlist/1)
+
+%{
+  2 => [one],
+  3 => [seven],
+  4 => [four],
+  5 => two_three_five,
+  6 => zero_six_nine,
+  7 => [eight]
+} = map
+
+[nine] = Enum.filter(zero_six_nine, &match?([], four -- &1))
+zero_six = zero_six_nine -- [nine]
+
+[zero] = Enum.filter(zero_six, &match?([], seven -- &1))
+[six] = Enum.filter(zero_six, &match?([_], seven -- &1))
+
+[three] = Enum.filter(two_three_five, &match?([], seven -- &1))
+[five] = Enum.filter(two_three_five, &match?([_], six -- &1))
+[two] = two_three_five -- [three, five]
+
+{zero, one, two, three, four, five, six, seven, eight, nine}
+```

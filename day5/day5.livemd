@@ -1,0 +1,152 @@
+# Day 5
+
+## Part 1
+
+Test input:
+
+```
+0,9 -> 5,9
+8,0 -> 0,8
+9,4 -> 3,4
+2,2 -> 2,1
+7,0 -> 7,4
+6,4 -> 2,0
+0,9 -> 2,9
+3,4 -> 1,4
+0,0 -> 8,8
+5,5 -> 8,2
+```
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+
+input = Kino.Input.textarea("input")
+```
+
+```elixir
+defmodule Line do
+  def new([start, ending]) do
+    [x1, y1] = pos_to_int(start)
+    [x2, y2] = pos_to_int(ending)
+
+    for posx <- x1..x2,
+        posy <- y1..y2 do
+      {posx, posy}
+    end
+  end
+
+  defp pos_to_int(pos) do
+    pos
+    |> String.split(",")
+    |> Enum.map(&String.to_integer/1)
+  end
+end
+
+defmodule Grid do
+  def mark(positions) do
+    Enum.reduce(positions, %{}, fn pos, grid ->
+      Map.update(grid, pos, 1, &(&1 + 1))
+    end)
+    |> Enum.filter(fn {{_x, _y}, val} ->
+      val > 1
+    end)
+    |> Enum.count()
+  end
+end
+
+lines =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Enum.filter(fn row ->
+    [[x1, y1], [x2, y2]] =
+      row
+      |> String.split(" -> ")
+      |> Enum.map(fn pos ->
+        String.split(pos, ",")
+      end)
+
+    x1 == x2 || y1 == y2
+  end)
+  |> Enum.map(fn row ->
+    String.split(row, " -> ")
+    |> Line.new()
+  end)
+
+all_positions = List.flatten(lines)
+
+Grid.mark(all_positions)
+```
+
+## Part 2
+
+```elixir
+# input = """
+# 0,9 -> 5,9
+# 8,0 -> 0,8
+# 9,4 -> 3,4
+# 2,2 -> 2,1
+# 7,0 -> 7,4
+# 6,4 -> 2,0
+# 0,9 -> 2,9
+# 3,4 -> 1,4
+# 0,0 -> 8,8
+# 5,5 -> 8,2
+# """
+
+defmodule Line do
+  def new([start, ending]) do
+    [x1, y1] = pos_to_int(start)
+    [x2, y2] = pos_to_int(ending)
+
+    if x1 == x2 || y1 == y2 do
+      for posx <- x1..x2,
+          posy <- y1..y2 do
+        {posx, posy}
+      end
+    else
+      [Enum.to_list(x1..x2), Enum.to_list(y1..y2)]
+      |> List.zip()
+    end
+  end
+
+  defp pos_to_int(pos) do
+    pos
+    |> String.split(",")
+    |> Enum.map(&String.to_integer/1)
+  end
+end
+
+defmodule Grid do
+  def mark(positions) do
+    Enum.reduce(positions, %{}, fn pos, acc ->
+      Map.update(acc, pos, 1, &(&1 + 1))
+    end)
+    |> Enum.filter(fn {{_x, _y}, val} ->
+      val > 1
+    end)
+    |> Enum.count()
+  end
+end
+
+lines =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Enum.map(fn row ->
+    String.split(row, " -> ")
+    |> Line.new()
+  end)
+
+all_positions = List.flatten(lines)
+
+Grid.mark(all_positions)
+```
+
+## Part 1 - Jose
+
+```elixir
+
+```
+
+## Part 2 - Jose

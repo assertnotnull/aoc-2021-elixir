@@ -1,0 +1,289 @@
+# Day 4
+
+## Part 1
+
+```elixir
+input = """
+7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
+
+22 13 17 11  0
+ 8  2 23  4 24
+21  9 14 16  7
+ 6 10  3 18  5
+ 1 12 20 15 19
+
+ 3 15  0  2 22
+ 9 18 13 17  5
+19  8  7 25 23
+20 11 10 24  4
+14 21 16 12  6
+
+14 21 17 24  4
+10 16 15  9 19
+18  8 23 26 20
+22 11 13  6  5
+ 2  0 12  3  7
+"""
+
+lines =
+  input
+  |> String.split("\n", trim: true)
+
+[raw_picked | raw_boards] = lines
+
+picked = String.split(raw_picked, ",", trim: true)
+
+boards =
+  raw_boards
+  |> Enum.map(fn row ->
+    row
+    |> String.split(" ", trim: true)
+    |> Enum.map(fn val -> %{:number => val, marked: false} end)
+  end)
+  |> Enum.chunk_every(5)
+
+defmodule Bingo do
+  def run(boards, []), do: boards
+
+  def run(boards, [str_number | others]) do
+    updated_boards =
+      boards
+      |> Enum.map(fn board ->
+        Enum.map(board, fn row ->
+          Enum.map(row, fn entry ->
+            # %{val => flag} = entry
+            # IO.inspect(str_number)
+            # IO.inspect(entry)
+
+            if entry.number == str_number do
+              %{entry | marked: true}
+            else
+              entry
+            end
+          end)
+        end)
+      end)
+
+    matching_boards =
+      updated_boards
+      |> Enum.flat_map(fn board ->
+        Enum.flat_map(board, fn row ->
+          if Enum.all?(row, fn row -> row.marked end) do
+            row
+          else
+            []
+          end
+        end)
+      end)
+
+    IO.inspect(matching_boards)
+    Bingo.run(updated_boards, others)
+  end
+end
+
+Bingo.run(boards, picked)
+```
+
+## Part 1 - Jose
+
+```elixir
+Mix.install(
+  [{:kino, "~> 0.4.1"}],
+  consolidate_protocols: false
+)
+
+input = Kino.Input.textarea("input")
+```
+
+```elixir
+defmodule Board do
+  empty_board = Tuple.duplicate(Tuple.duplicate(false, 5), 5)
+  @enforce_keys [:numbers]
+  defstruct numbers: %{}, grid: empty_board
+
+  def new(numbers) when is_map(numbers) do
+    %Board{numbers: numbers}
+  end
+
+  def mark(%Board{numbers: numbers} = board, number) do
+    case numbers do
+      %{^number => {row, col}} ->
+        put_in(board, [Access.key(:grid), Access.elem(row), Access.elem(col)], true)
+
+      %{} ->
+        board
+    end
+  end
+
+  def unmarked_sum(%Board{numbers: numbers, grid: grid}) do
+    Enum.sum(
+      for {number, {row, col}} <- numbers,
+          grid |> elem(row) |> elem(col) == false,
+          do: number
+    )
+  end
+
+  def won?(%Board{grid: grid}) do
+    row_won?(grid) or column_won?(grid)
+  end
+
+  defp column_won?(grid) do
+    Enum.any?(0..4, fn col ->
+      Enum.all?(0..4, fn row -> grid |> elem(row) |> elem(col) end)
+    end)
+  end
+
+  defp row_won?(grid) do
+    Enum.any?(0..4, fn row ->
+      elem(grid, row) == {true, true, true, true, true}
+    end)
+  end
+end
+```
+
+```elixir
+# input = """
+# 7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
+
+# 22 13 17 11  0
+#  8  2 23  4 24
+# 21  9 14 16  7
+#  6 10  3 18  5
+#  1 12 20 15 19
+
+#  3 15  0  2 22
+#  9 18 13 17  5
+# 19  8  7 25 23
+# 20 11 10 24  4
+# 14 21 16 12  6
+
+# 14 21 17 24  4
+# 10 16 15  9 19
+# 18  8 23 26 20
+# 22 11 13  6  5
+#  2  0 12  3  7
+# """
+
+[numbers | grids] =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+
+boards =
+  grids
+  |> Enum.chunk_every(5)
+  |> Enum.map(fn rows ->
+    Board.new(
+      for {line, row} <- Enum.with_index(rows),
+          {number, col} <- Enum.with_index(String.split(line)),
+          into: %{} do
+        {String.to_integer(number), {row, col}}
+      end
+    )
+  end)
+
+{number, board = %Board{}} =
+  numbers
+  |> String.split(",")
+  |> Enum.map(&String.to_integer/1)
+  |> Enum.reduce_while(boards, fn number, boards ->
+    boards = Enum.map(boards, &Board.mark(&1, number))
+
+    if board = Enum.find(boards, &Board.won?/1) do
+      {:halt, {number, board}}
+    else
+      {:cont, boards}
+    end
+  end)
+
+number * Board.unmarked_sum(board)
+```
+
+## Part 2
+
+```elixir
+# input = """
+# 7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
+
+# 22 13 17 11  0
+#  8  2 23  4 24
+# 21  9 14 16  7
+#  6 10  3 18  5
+#  1 12 20 15 19
+
+#  3 15  0  2 22
+#  9 18 13 17  5
+# 19  8  7 25 23
+# 20 11 10 24  4
+# 14 21 16 12  6
+
+# 14 21 17 24  4
+# 10 16 15  9 19
+# 18  8 23 26 20
+# 22 11 13  6  5
+#  2  0 12  3  7
+# """
+
+[numbers | grids] =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+
+boards =
+  grids
+  |> Enum.chunk_every(5)
+  |> Enum.map(fn rows ->
+    Board.new(
+      for {line, row} <- Enum.with_index(rows),
+          {number, col} <- Enum.with_index(String.split(line)),
+          into: %{} do
+        {String.to_integer(number), {row, col}}
+      end
+    )
+  end)
+
+{number, board = %Board{}} =
+  numbers
+  |> String.split(",")
+  |> Enum.map(&String.to_integer/1)
+  |> Enum.reduce_while(boards, fn number, boards ->
+    boards = Enum.map(boards, &Board.mark(&1, number))
+
+    case Enum.reject(boards, &Board.won?/1) do
+      [] ->
+        [board] = boards
+        {:halt, {number, board}}
+
+      boards ->
+        {:cont, boards}
+    end
+  end)
+
+number * Board.unmarked_sum(board)
+```
+
+## Ramblings
+
+```elixir
+defimpl Inspect, for: Board do
+  def inspect(%Board{grid: grid, numbers: numbers}, _opts) do
+    inverse = for {k, v} <- numbers, into: %{}, do: {v, k}
+
+    for row <- 0..4 do
+      row =
+        for col <- 0..4 do
+          number = Integer.to_string(inverse[{row, col}])
+
+          if grid |> elem(row) |> elem(col) do
+            IO.ANSI.format([:crossed_out, number])
+          else
+            number
+          end
+        end
+    end
+    |> IO.iodata_to_binary()
+  end
+end
+
+board
+```

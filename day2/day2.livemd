@@ -1,0 +1,142 @@
+# Day2
+
+## My solutions
+
+## Jose solutions
+
+## Part 1 - 1
+
+```elixir
+input = IO.getn("input", 10000)
+
+input
+|> String.split("\n", trim: true)
+|> Enum.map(fn
+  "forward " <> number -> {:forward, String.to_integer(number)}
+  "down " <> number -> {:down, String.to_integer(number)}
+  "up " <> number -> {:up, String.to_integer(number)}
+end)
+|> Enum.reduce({_depth = 0, _position = 0}, fn
+  {:forward, value}, {depth, position} -> {depth, position + value}
+  {:down, value}, {depth, position} -> {depth + value, position}
+  {:up, value}, {depth, position} -> {depth - value, position}
+end)
+|> then(fn {depth, position} -> depth * position end)
+```
+
+## version 2
+
+```elixir
+input = IO.getn("input", 10000)
+
+input
+|> String.split("\n", trim: true)
+|> Enum.reduce({_depth = 0, _position = 0}, fn
+  "forward " <> number, {depth, position} ->
+    {depth, String.to_integer(number) + position}
+
+  "down " <> number, {depth, position} ->
+    {String.to_integer(number) + depth, position}
+
+  "up " <> number, {depth, position} ->
+    {-String.to_integer(number) + depth, position}
+end)
+|> then(fn {depth, position} -> depth * position end)
+```
+
+## Part 2
+
+```elixir
+input = IO.getn("input", 10000)
+
+input
+|> String.split("\n", trim: true)
+|> Enum.reduce({_depth = 0, _position = 0, _aim = 0}, fn
+  "forward " <> number, {depth, position, aim} ->
+    number = String.to_integer(number)
+    {depth + aim * number, number + position, aim}
+
+  "down " <> number, {depth, position, aim} ->
+    {depth, position, aim + String.to_integer(number)}
+
+  "up " <> number, {depth, position, aim} ->
+    {depth, position, aim - String.to_integer(number)}
+end)
+|> then(fn {depth, position, _aim} -> depth * position end)
+```
+
+## Next level solution
+
+```elixir
+input = IO.getn("input", 10000)
+
+defmodule Submarine do
+  def navigate("forward " <> number, {depth, position, aim}) do
+    number = String.to_integer(number)
+    {depth + aim * number, number + position, aim}
+  end
+
+  def navigate("down " <> number, {depth, position, aim}) do
+    {depth, position, aim + String.to_integer(number)}
+  end
+
+  def navigate("up " <> number, {depth, position, aim}) do
+    {depth, position, aim - String.to_integer(number)}
+  end
+end
+
+input
+|> String.split("\n", trim: true)
+|> Enum.reduce({_depth = 0, _position = 0, _aim = 0}, &Submarine.navigate/2)
+|> then(fn {depth, position, _aim} -> depth * position end)
+```
+
+## Part 1 - Nx
+
+```elixir
+Mix.install([
+  {:nx, github: "elixir-nx/nx", sparse: "nx"}
+])
+```
+
+```elixir
+defmodule Subnx do
+  import Nx.Defn
+
+  defn navigate(tensor) do
+    {size, _} = Nx.shape(tensor)
+
+    {_, depth, position, _} =
+      while {i = 0, depth = 0, position = 0, tensor}, i < size do
+        instruction = tensor[i][0]
+        value = tensor[i][1]
+
+        cond do
+          instruction == 0 -> {i + 1, depth, position + value, tensor}
+          instruction == 1 -> {i + 1, depth + value, position, tensor}
+          instruction == 2 -> {i + 1, depth - value, position, tensor}
+          :otherwise -> {i + 1, depth, position, tensor}
+        end
+      end
+
+    depth * position
+  end
+end
+
+input = IO.getn("input", 10000)
+
+input
+|> String.split("\n", trim: true)
+|> Enum.map(fn
+  "forward " <> number ->
+    [0, String.to_integer(number)]
+
+  "down " <> number ->
+    [1, String.to_integer(number)]
+
+  "up " <> number ->
+    [2, String.to_integer(number)]
+end)
+|> Nx.tensor()
+|> Subnx.navigate()
+```
